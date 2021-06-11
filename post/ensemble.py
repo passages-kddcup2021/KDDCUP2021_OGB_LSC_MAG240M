@@ -19,7 +19,7 @@ online = args.online
 phase = 'online' if online else 'offline'
 dataset = MAG240MDataset(root=args.root)
 
-commits = ['2048_hidden', 'sgc_2048', 'gat', 'add_pap']
+commits = ['2048_hidden', 'sgc_2048', 'gat']
 
 split_dict = dataset.get_idx_split()
 valid_idx = split_dict['valid']  # numpy array storing indices of validation paper nodes
@@ -41,11 +41,11 @@ for commit in commits:
     results.append(result)
 
 # weight
-weights = [0.2, 0.4, 0.4]
 weight_result = []
+weights = [0.2, 0.4, 0.4]
 for result in results:
     for idx, value in enumerate(result.values()):
-        weight_result.append(weights[idx] * result)
+        weight_result.append(weights[idx] * value)
 weight_result = sum(weight_result)
 
 final_acc = accuracy_score(test_Y, (weight_result).argmax(1).cpu().numpy())
