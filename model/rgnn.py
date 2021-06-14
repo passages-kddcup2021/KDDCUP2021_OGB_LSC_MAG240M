@@ -151,8 +151,10 @@ class MAG240M(LightningDataModule):
             dim_chunk_size = 64
             N = (dataset.num_papers + dataset.num_authors +
                  dataset.num_institutions)
-
-            paper_feat = dataset.paper_feat
+            if self.commit == 'sgc_rgat':
+                paper_feat = np.load(f'{dataset.dir}/paper_feat_{self.commit}.npy', mmap_mode='r')
+            else:
+                paper_feat = dataset.paper_feat
             x = np.memmap(path, dtype=np.float16, mode='w+',
                           shape=(N, self.num_features))
 
