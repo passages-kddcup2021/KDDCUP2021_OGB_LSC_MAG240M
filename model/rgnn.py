@@ -8,6 +8,7 @@ from typing import List, NamedTuple, Optional
 import numpy as np
 import torch
 import torch.nn.functional as F
+from ogb.lsc import MAG240MDataset
 from pytorch_lightning import (LightningDataModule, LightningModule, Trainer,
                                seed_everything)
 from pytorch_lightning.callbacks import ModelCheckpoint
@@ -19,7 +20,6 @@ from torch_geometric.data import NeighborSampler
 from torch_geometric.nn import GATConv, SAGEConv
 from torch_sparse import SparseTensor
 from tqdm import tqdm
-from ogb.lsc import MAG240MDataset
 
 
 class Batch(NamedTuple):
