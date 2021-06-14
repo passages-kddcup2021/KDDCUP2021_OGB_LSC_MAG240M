@@ -55,13 +55,14 @@ def save_col_slice(x_src, x_dst, start_row_idx, end_row_idx, start_col_idx,
 
 
 class MAG240M(LightningDataModule):
-    def __init__(self, data_dir: str, batch_size: int, sizes: List[int],
+    def __init__(self, commit: str, data_dir: str, batch_size: int, sizes: List[int],
                  in_memory: bool = False):
         super().__init__()
         self.data_dir = data_dir
         self.batch_size = batch_size
         self.sizes = sizes
         self.in_memory = in_memory
+        self.commit = commit
 
     @property
     def num_features(self) -> int:
@@ -140,9 +141,9 @@ class MAG240M(LightningDataModule):
             torch.save(full_adj_t, path)
             print(f'Done! [{time.perf_counter() - t:.2f}s]')
 
-        path = f'{dataset.dir}/full_feat.npy'
-        done_flag_path = f'{dataset.dir}/full_feat_done.txt'
-        if not osp.exists(done_flag_path):  # Will take ~3 hours...
+        path = f'{dataset.dir}/full_feat_{self.commit}.npy'
+        done_flag_path = f'{dataset.dir}/full_feat_{self.commit}_done.txt'
+        if not osp.exists(path):  # Will take ~3 hours...
             t = time.perf_counter()
             print('Generating full feature matrix...')
 
@@ -232,10 +233,10 @@ class MAG240M(LightningDataModule):
         N = dataset.num_papers + dataset.num_authors + dataset.num_institutions
 
         if self.in_memory:
-            self.x = np.load(f'{dataset.dir}/full_feat.npy')
+            self.x = np.load(f'{dataset.dir}/full_feat_{self.commit}.npy')
             self.x = torch.from_numpy(self.x).share_memory_()
         else:
-            self.x = np.memmap(f'{dataset.dir}/full_feat.npy',
+            self.x = np.memmap(f'{dataset.dir}/full_feat_{self.commit}.npy',
                                dtype=np.float16, mode='r',
                                shape=(N, self.num_features))
 
@@ -392,23 +393,21 @@ if __name__ == '__main__':
     parser.add_argument('--batch_size', type=int, default=1024)
     parser.add_argument('--dropout', type=float, default=0.5)
     parser.add_argument('--epochs', type=int, default=100)
-    parser.add_argument('--model', type=str, default='rgat',
-                        choices=['rgat', 'rgraphsage'])
+    parser.add_argument('--model', type=str, default='rgat', choices=['rgat', 'rgraphsage'])
     parser.add_argument('--sizes', type=str, default='25-15')
     parser.add_argument('--root', type=str, default='./dataset')
     parser.add_argument('--in-memory', action='store_true')
     parser.add_argument('--device', type=str, default='0')
     parser.add_argument('--evaluate', action='store_true')
     parser.add_argument('--save_embed', action='store_true')
-    parser.add_argument('--commit', type=str, default='base')
+    parser.add_argument('--commit', type=str, default='base', choices=['rgat', 'sgc_rgat'])
     parser.add_argument('--version', type=int, default=-1)
     parser.add_argument('--weight_decay', type=float, default=0)
     args = parser.parse_args()
     args.sizes = [int(i) for i in args.sizes.split('-')]
     print(args)
-    ROOT = args.root
     seed_everything(42)
-    datamodule = MAG240M(ROOT, args.batch_size, args.sizes, args.in_memory)
+    datamodule = MAG240M(args.root, args.commit, args.batch_size, args.sizes, args.in_memory)
 
     if not args.evaluate:
         model = RGNN(args.commit, args.model, datamodule.num_features,
@@ -440,18 +439,18 @@ if __name__ == '__main__':
         model = RGNN.load_from_checkpoint(
             checkpoint_path=ckpt, hparams_file=f'{logdir}/hparams.yaml')
         model.to(device)
+        model.eval()
 
         datamodule.batch_size = 16
         datamodule.sizes = [200] * len(args.sizes)  # (Almost) no sampling...
 
         trainer.test(model=model, datamodule=datamodule)
 
-        loader = datamodule.hidden_test_dataloader()
-
         if not os.path.exists(f'./results/{args.commit}'):
             os.makedirs(f'./results/{args.commit}', exist_ok=True)
 
-        model.eval()
+        # save test hidden embedding
+        loader = datamodule.hidden_test_dataloader()
         y_preds = []
         for batch in tqdm(loader):
             batch = batch.to(device)
@@ -464,6 +463,7 @@ if __name__ == '__main__':
         np.save(f'./results/{args.commit}/test_preds.npy', y_preds.numpy())
         np.save(f'./results/{args.commit}/test_trues.npy', y_trues.numpy())
 
+        # save valid hidden embedding
         loader = datamodule.test_dataloader()
         y_preds = []
         for batch in tqdm(loader):
@@ -476,6 +476,7 @@ if __name__ == '__main__':
         np.save(f'./results/{args.commit}/valid_preds.npy', y_preds.numpy())
         np.save(f'./results/{args.commit}/valid_trues.npy', y_trues.numpy())
 
+        # save mlp parms
         if args.save_embed:
             torch.save(model.mlp.state_dict(),
                        f'./results/{args.commit}/mlp.pt')
