@@ -143,7 +143,7 @@ class MAG240M(LightningDataModule):
 
         path = f'{dataset.dir}/full_feat_{self.commit}.npy'
         done_flag_path = f'{dataset.dir}/full_feat_{self.commit}_done.txt'
-        if not osp.exists(path):  # Will take ~3 hours...
+        if not osp.exists(done_flag_path):  # Will take ~3 hours...
             t = time.perf_counter()
             print('Generating full feature matrix...')
 
