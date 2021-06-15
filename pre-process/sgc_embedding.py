@@ -1,4 +1,6 @@
+import argparse
 import os.path as osp
+import time
 
 import numpy as np
 import torch
@@ -6,7 +8,6 @@ from ogb.lsc import MAG240MDataset
 from torch_geometric.nn.conv.gcn_conv import gcn_norm
 from torch_sparse import SparseTensor, to_torch_sparse
 from tqdm import tqdm
-import argparse
 
 
 def get_col_slice(x, start_row_idx, end_row_idx, start_col_idx, end_col_idx):
@@ -31,8 +32,21 @@ def save_col_slice(x_src, x_dst, start_row_idx, end_row_idx, start_col_idx,
 def save_laplacian(directory):
     dataset = MAG240MDataset(directory)
 
+    path = f'{dataset.dir}/paper_to_paper_symmetric.pt'
+    if not osp.exists(path):  # Will take approximately 5 minutes...
+        t = time.perf_counter()
+        print('Converting adjacency matrix...', end=' ', flush=True)
+        edge_index = dataset.edge_index('paper', 'cites', 'paper')
+        edge_index = torch.from_numpy(edge_index)
+        adj_t = SparseTensor(
+            row=edge_index[0], col=edge_index[1],
+            sparse_sizes=(dataset.num_papers, dataset.num_papers),
+            is_sorted=True)
+        torch.save(adj_t.to_symmetric(), path)
+        print(f'Done! [{time.perf_counter() - t:.2f}s]')
+
     num_papers = dataset.num_papers
-    row, col, _ = torch.load(f'{dataset.dir}/paper_to_paper_symmetric.pt').coo()
+    row, col, _ = torch.load(path).coo()
 
     paper_adj_t = SparseTensor(row=row, col=col, sparse_sizes=(num_papers, num_papers), is_sorted=True)
     index = torch.stack([row, col], dim=0)
@@ -85,7 +99,7 @@ def feature_transformation(directory):
     dim_chunk_size = 128
     in_x = x
 
-    outpath = f'{dataset.dir}/full_feat_sgc_rgat.npy'
+    outpath = f'{dataset.dir}/paper_feat_sgc.npy'
     dst = np.memmap(outpath, dtype=np.float16, mode='w+', shape=(num_papers, 768))
     for idx in tqdm(range(k + 1), desc='k'):
         for i in tqdm(range(0, num_features, dim_chunk_size), desc='feature'):
