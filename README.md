@@ -70,7 +70,7 @@ All the results are obtained in the following environment:
 - **CPU**: Intel(R) Xeon(R) Silver 4216 CPU @ 2.10GHz * 2
 - **GPU**: GeForce RTX 3090 (24GB)
 - **RAM**: 256G, 3200MHz
-- **HDD**: NVMe SSD 500GB,  410K IOPS
+- **HDD**: NVMe SSD, 410K IOPS
 
 **Transfer Learning**
 
