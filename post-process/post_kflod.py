@@ -81,7 +81,7 @@ train_Y = torch.from_numpy(train_Y).long().to(device)
 test_X = torch.from_numpy(test_X).float().to(device)
 
 # base result
-model = Model()
+model = Model(args)
 model.to(device)
 model.mlp.load_state_dict(mlp_parm)
 model.eval()
@@ -106,7 +106,6 @@ for idx, (train_index, valid_index) in enumerate(kf.split(train_X)):
     optim = Adam(model.parameters(), lr=0.0001, weight_decay=1e-5)
     ce = nn.CrossEntropyLoss()
 
-    model.to(device)
     train_inps = train_X[train_index]
     train_labs = train_Y[train_index]
 
@@ -136,8 +135,8 @@ for idx, (train_index, valid_index) in enumerate(kf.split(train_X)):
 finetune_test_logits = None
 finetune_valid_logits = torch.zeros(train_X.shape[0], args.out_channels).to(device)
 for idx, (train_index, valid_index) in enumerate(kf.split(train_X)):
-    mlp_parm = torch.load(f'../saved/finetune/{commit}_{idx}.pt')
-    model = Model()
+    mlp_parm = torch.load(f'./saved/finetune/{commit}_{idx}.pt')
+    model = Model(args)
     model.to(device)
     model.load_state_dict(mlp_parm)
 
@@ -194,8 +193,8 @@ for idx, (train_index, valid_index) in enumerate(kf.split(train_X)):  # 调用sp
 random_test_logits = None
 random_valid_logits = torch.zeros(train_X.shape[0], args.out_channels).to(device)
 for idx, (train_index, valid_index) in enumerate(kf.split(train_X)):
-    mlp_parm = torch.load(f'../saved/random/{commit}_{idx}.pt')
-    model = Model()
+    mlp_parm = torch.load(f'./saved/random/{commit}_{idx}.pt')
+    model = Model(args)
     model.to(device)
     model.load_state_dict(mlp_parm)
 
@@ -229,5 +228,5 @@ result_dict = {
 }
 
 
-with open(f'./post_result/{commit}_result.pkl', 'wb') as f:
+with open(f'./post_results/{commit}_result.pkl', 'wb') as f:
     pickle.dump(result_dict, f)

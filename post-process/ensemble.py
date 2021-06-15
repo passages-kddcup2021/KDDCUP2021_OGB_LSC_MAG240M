@@ -29,7 +29,7 @@ test_Y = paper_label[test_idx]
 # load results
 results = []
 for commit in commits:
-    with open(f'../post_result/{commit}_result.pkl', 'rb') as f:
+    with open(f'./post_results/{commit}_result.pkl', 'rb') as f:
         result = pickle.load(f)
     results.append(result)
 
@@ -39,7 +39,7 @@ weights = [0.2, 0.4, 0.4]
 weight_valid_result = []
 for result in results:
     for idx, value in enumerate(result['valid'].values()):
-        weight_valid_result.append(weights[idx] * value)
+        weight_valid_result.append(weights[idx] * value.to(device))
 weight_valid_result = sum(weight_valid_result)
 
 final_acc = accuracy_score(train_Y, (weight_valid_result).argmax(1).cpu().numpy())
@@ -48,8 +48,8 @@ print(f'final valid acc: {final_acc}')
 # save result
 weight_test_result = []
 for result in results:
-    for idx, value in enumerate(result['valid'].values()):
-        weight_test_result.append(weights[idx] * value)
+    for idx, value in enumerate(result['test'].values()):
+        weight_test_result.append(weights[idx] * value.to(device))
 weight_test_result = sum(weight_test_result)
 y_pred = weight_test_result.argmax(1)
 assert y_pred.shape == (146818, )
