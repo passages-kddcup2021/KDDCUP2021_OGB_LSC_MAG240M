@@ -1,6 +1,8 @@
-#  KDD Cup 2021: OGB_LSC_MAG240M
+#  Solution of Team passages in KDD Cup 2021
 
 Implementation of our solution to the MAG240M track in KDD CUP 2021. For more detinformation, please refer to the **[OGB-LSC paper](https://arxiv.org/abs/2103.09430)** and the web page [OGB-LSC @ KDD Cup 2021 | Open Graph Benchmark (stanford.edu)](https://ogb.stanford.edu/kddcup2021/)
+
+Team Members: Kaiyuan Li, Xiang Long, Zhichao Feng, Mingdao Wang, Xiaofan Liu, Pengfei Wang, Quan Lin, Kun Zhao, Baole Ai.
 
 ## Requirements
 
