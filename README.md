@@ -19,7 +19,7 @@ Implementation of our solution to the MAG240M track in KDD CUP 2021. For more de
 
 ## Getting Started
 
-The default path of the dataset  is `.`， you can change it with add  `--root <your_path>` in your command line.
+The default path of the dataset  is `.`， you can change it with add  `--root <your_path>` in your command line for all python scripts. We also provide script `run.sh` which can change the dataset path easily.
 
 ### Pre-Process
 
