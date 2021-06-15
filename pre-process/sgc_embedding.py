@@ -85,7 +85,7 @@ def feature_transformation(directory):
     dim_chunk_size = 128
     in_x = x
 
-    outpath = osp.join(dataset.dir, 'processed', 'paper', 'node_feat_copy.npy')
+    outpath = f'{dataset.dir}/full_feat_sgc_rgat.npy'
     dst = np.memmap(outpath, dtype=np.float16, mode='w+', shape=(num_papers, 768))
     for idx in tqdm(range(k + 1), desc='k'):
         for i in tqdm(range(0, num_features, dim_chunk_size), desc='feature'):
