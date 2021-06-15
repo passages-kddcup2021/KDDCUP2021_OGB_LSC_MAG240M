@@ -24,6 +24,7 @@ Team Members: Kaiyuan Li, Xiang Long, Zhichao Feng, Mingdao Wang, Xiaofan Liu, P
 The default path of the dataset  is `.`， you can change it with add  `--root <your_path>` in your command line for all python scripts. We also provide script `run.sh` which can change the dataset path easily.
 
 ### Pre-Process
+Note: If you want to use this trick, you need to prepare `paper_to_paper_symmetric.pt` in advance. For more information, see [prepared](https://github.com/passages-kddcup2021/KDD2021_OGB_LSC_MAG240M/blob/bf1c5a1a53d73eefef1a2ce1aaf2f86f02b17741/model/rgnn.py#L79)
 
 ```shell
 python ./pre-process/sgc_embedding.py
