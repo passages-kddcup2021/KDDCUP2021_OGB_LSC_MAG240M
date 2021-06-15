@@ -77,16 +77,56 @@ def test(model, x_eval, y_eval):
     return evaluator.eval({'y_true': y_eval, 'y_pred': y_pred})['acc']
 
 
+def get_embedding(model, dataset):
+
+    np_feat_list = []
+    num_papers = dataset.num_papers
+    eval_batch_size = 380000
+    for i in range(5):
+        path = f'{dataset.dir}/{i}_step_paper_feature.npy'
+        mat = np.load(path, mmap_mode='r')
+        np_feat_list.append(mat)
+
+    model.eval()
+    with torch.no_grad():
+        save_list = []
+        for idx in tqdm(DataLoader(range(num_papers), eval_batch_size, shuffle=False)):
+            paper_feat_list = []
+            for i in range(5):
+                paper_feat_list.append(np_feat_list[i][idx])
+            all_paper_feat = np.stack(paper_feat_list, axis=0)
+            del paper_feat_list
+            paper_feat = torch.from_numpy(all_paper_feat).to(torch.float).cuda()
+
+            all_attention_feat = model.weight_layer(paper_feat).squeeze(dim=2).T
+            attention_score = F.softmax(all_attention_feat, dim=1)
+            del all_attention_feat
+            paper_feat = (paper_feat.T * attention_score).T
+            del attention_score
+            paper_feat = paper_feat.sum(dim=0)
+            np_feat = paper_feat.cpu().numpy()
+            del paper_feat
+            save_list.append(np_feat)
+
+        outpath = f'{dataset.dir}/att_node_feat.npy'
+        paper_feat = np.concatenate(save_list, axis=0)
+
+        print("saving embeddings")
+        np.save(outpath, paper_feat)
+        print("save done")
+        del paper_feat
+
+
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--device', type=int, default=0)
     parser.add_argument('--hidden_channels', type=int, default=2048)
     parser.add_argument('--num_layers', type=int, default=2),
-    parser.add_argument('--root', type=str, default='.')
     parser.add_argument('--no_batch_norm', action='store_true')
     parser.add_argument('--relu_last', action='store_true')
     parser.add_argument('--dropout', type=float, default=0.5)
+    parser.add_argument('--root', type=str, default='.')
     parser.add_argument('--lr', type=float, default=0.01)
     parser.add_argument('--batch_size', type=int, default=38000)
     parser.add_argument('--epochs', type=int, default=1000)
@@ -154,3 +194,4 @@ if __name__ == '__main__':
                 pbar.set_postfix(valid_acc=valid_acc, best_acc=best_valid_acc)
 
     print(f'Valid: {best_valid_acc: .4f}')
+    get_embedding(model, dataset)
