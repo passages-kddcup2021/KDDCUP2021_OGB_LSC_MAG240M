@@ -1,4 +1,5 @@
 import argparse
+import os
 import os.path as osp
 import time
 
@@ -8,6 +9,7 @@ from ogb.lsc import MAG240MDataset
 from torch_geometric.nn.conv.gcn_conv import gcn_norm
 from torch_sparse import SparseTensor, to_torch_sparse
 from tqdm import tqdm
+from shutil import copyfile
 
 
 def get_col_slice(x, start_row_idx, end_row_idx, start_col_idx, end_col_idx):
@@ -63,13 +65,13 @@ def save_laplacian(directory):
     torch.save(laplacian_mat, path)
 
 
-def read_mat(directory):
-    k = 6
+def read_mat(directory, k):
     dataset = MAG240MDataset(directory)
     train_idx = dataset.get_idx_split('train')
     val_idx = dataset.get_idx_split('valid')
 
-    for i in tqdm(range(k)):
+    os.makedirs(f'{dataset.dir}/labeled_node_feat', exist_ok=True)
+    for i in tqdm(range(k + 1)):
         file_name = f'{dataset.dir}/{i}_step_paper_feature.npy'
         outpath = f'{dataset.dir}/labeled_node_feat/train_val_feat_{i}.npz'
         mat = np.load(file_name, mmap_mode='r')
@@ -79,7 +81,7 @@ def read_mat(directory):
         del train, val, mat
 
 
-def feature_transformation(directory):
+def feature_transformation(directory, k):
     print("running")
     dataset = MAG240MDataset(directory)
     num_papers = dataset.num_papers
@@ -94,14 +96,16 @@ def feature_transformation(directory):
     x = np.memmap(path, dtype=np.float16, mode='r', shape=(num_papers, 768))
     print("shape of node_feat is", x.shape)
 
-    k = 3
+    target = f'{dataset.dir}/0_step_paper_feature.npy'
+    copyfile(path, target)
+
     num_features = 768
     dim_chunk_size = 128
     in_x = x
 
     outpath = f'{dataset.dir}/paper_feat_sgc.npy'
     dst = np.memmap(outpath, dtype=np.float16, mode='w+', shape=(num_papers, 768))
-    for idx in tqdm(range(k + 1), desc='k'):
+    for idx in tqdm(range(k), desc='k'):
         for i in tqdm(range(0, num_features, dim_chunk_size), desc='feature'):
             j = min(i + dim_chunk_size, num_features)
             inputs = get_col_slice(
@@ -123,7 +127,7 @@ def feature_transformation(directory):
         outpath = f'{dataset.dir}/{idx + 1}_step_paper_feature.npy'
         print(f"saving {idx + 1}-step matrix")
         np.save(outpath, dst)
-        print("save done")
+        print("save done")    
 
 
 if __name__ == '__main__':
@@ -131,5 +135,5 @@ if __name__ == '__main__':
     parser.add_argument('--root', type=str, default='.')
     args = parser.parse_args()
     save_laplacian(args.root)
-    feature_transformation(args.root)
-    read_mat(args.root)
+    feature_transformation(args.root, 3)
+    read_mat(args.root, 3)

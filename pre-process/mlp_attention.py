@@ -6,6 +6,7 @@ import torch.nn.functional as F
 from ogb.lsc import MAG240MDataset, MAG240MEvaluator
 from torch.nn import BatchNorm1d, Identity, Linear, ModuleList
 from torch.utils.data import DataLoader
+import os
 from tqdm import tqdm
 
 
@@ -77,12 +78,12 @@ def test(model, x_eval, y_eval):
     return evaluator.eval({'y_true': y_eval, 'y_pred': y_pred})['acc']
 
 
-def get_embedding(model, dataset):
+def get_embedding(model, dataset, k):
 
     np_feat_list = []
     num_papers = dataset.num_papers
     eval_batch_size = 380000
-    for i in range(5):
+    for i in range(k + 1):
         path = f'{dataset.dir}/{i}_step_paper_feature.npy'
         mat = np.load(path, mmap_mode='r')
         np_feat_list.append(mat)
@@ -92,11 +93,11 @@ def get_embedding(model, dataset):
         save_list = []
         for idx in tqdm(DataLoader(range(num_papers), eval_batch_size, shuffle=False)):
             paper_feat_list = []
-            for i in range(5):
+            for i in range(k + 1):
                 paper_feat_list.append(np_feat_list[i][idx])
             all_paper_feat = np.stack(paper_feat_list, axis=0)
             del paper_feat_list
-            paper_feat = torch.from_numpy(all_paper_feat).to(torch.float).cuda()
+            paper_feat = torch.from_numpy(all_paper_feat).to(device, torch.float)
 
             all_attention_feat = model.weight_layer(paper_feat).squeeze(dim=2).T
             attention_score = F.softmax(all_attention_feat, dim=1)
@@ -150,8 +151,8 @@ if __name__ == '__main__':
     x_train = np.stack(train_list, axis=1)
     x_val = np.stack(val_list, axis=1)
 
-    x_train = torch.from_numpy(x_train).to(torch.float).cuda()
-    x_valid = torch.from_numpy(x_val).to(torch.float).cuda()
+    x_train = torch.from_numpy(x_train).to(device, torch.float)
+    x_valid = torch.from_numpy(x_val).to(device, torch.float)
 
     print(x_train.shape)
 
@@ -160,9 +161,9 @@ if __name__ == '__main__':
     test_idx = dataset.get_idx_split('test')
 
     y_train = torch.from_numpy(dataset.paper_label[train_idx])
-    y_train = y_train.to(torch.long).cuda()
+    y_train = y_train.to(device, torch.long)
     y_valid = torch.from_numpy(dataset.paper_label[valid_idx])
-    y_valid = y_valid.to(torch.long).cuda()
+    y_valid = y_valid.to(device, torch.long)
 
     num_features = 768
     num_paper_features = num_features
@@ -170,16 +171,16 @@ if __name__ == '__main__':
 
     model = MLP(num_paper_features, args.hidden_channels,
                 num_classes, args.num_layers, args.dropout,
-                not args.no_batch_norm, args.relu_last)
-    model = torch.nn.DataParallel(model).cuda()
+                not args.no_batch_norm, args.relu_last).to(device)
 
     print('number of GPUs available:{}'.format(torch.cuda.device_count()))
-    optimizer = torch.optim.Adam(model.parameters(), lr=lr)
+    optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
     num_params = sum([p.numel() for p in model.parameters()])
     print(f'#Params: {num_params}')
 
     pbar = tqdm(range(args.epochs))
     best_valid_acc = 0
+    os.makedirs(f'{dataset.dir}/saved', exist_ok=True)
     for epoch in pbar:
         loss = train(model, x_train, y_train, args.batch_size, optimizer)
         if epoch % 10 == 0:
@@ -189,7 +190,6 @@ if __name__ == '__main__':
                 if valid_acc > best_valid_acc:
                     best_valid_acc = valid_acc
                     torch.save(model.state_dict(), f'{dataset.dir}/saved/mlp.pth')
-                    print("best_valid_result", best_valid_acc)
 
                 pbar.set_postfix(valid_acc=valid_acc, best_acc=best_valid_acc)
 
