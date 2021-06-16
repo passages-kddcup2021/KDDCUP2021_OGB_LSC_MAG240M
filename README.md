@@ -76,8 +76,8 @@ All the results are obtained in the following environment:
 
 | Model        | None-tune | Rough-tune | Fine-tune |
 | ------------ | --------- | --------- | --------- |
-| RoBerta+RGAT | 0.7064    | 0.7294    | 0.7355    |
-| SGC+RGAT     | 0.7081    | 0.7293    | 0.7359    |
+| RoBERTa+R-GAT | 0.7064    | 0.7294    | 0.7355    |
+| SGC+R-GAT     | 0.7081    | 0.7293    | 0.7359    |
 
 The results above are obtained on the validation data. Also, since we use validation data in the transfer learning phase, the results of **Rough-tune** and **Fine-tune** are according 5-fold cross validation on validation data.
 
